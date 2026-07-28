@@ -162,9 +162,11 @@ export default function App(){
     }finally{setSearching(false);}
   };
 
-  const addFood=async(f)=>{
-    const ratio=f.fav?1:grams/(f.base||100);
-    const label=f.fav?f.name.replace(" ⭐",""):`${f.name} ${grams}g`;
+  const addFood=async(f, gramsToAdd)=>{
+    // 즐겨찾기는 1회분 그대로. 아니면 지정된 그램(1인분 or 100g 기준) 사용
+    const g = f.fav ? null : (gramsToAdd || grams);
+    const ratio = f.fav ? 1 : g/(f.base||100);
+    const label = f.fav ? f.name.replace(" ⭐","") : `${f.name} ${g}g`;
     await insert({day:date,kind:"food",label,kcal:Math.round(f.kcal*ratio),prot:Math.round(f.prot*ratio*10)/10,carb:Math.round(f.carb*ratio*10)/10,fat:Math.round(f.fat*ratio*10)/10});
     setQ("");setResults([]);setGrams(100);setNote("");
   };
@@ -351,18 +353,36 @@ export default function App(){
           {note&&<div style={{fontSize:12,color:blue,marginTop:8,fontWeight:600}}>{note}</div>}
           {results.length>0&&(
             <div style={{marginTop:12}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                <span style={{fontSize:12,color:sub}}>섭취량</span>
-                <input type="number" value={grams} onChange={e=>setGrams(Number(e.target.value)||0)} style={{width:70,padding:"6px 10px",borderRadius:9,border:`1px solid ${line}`,color:ink,fontFamily:font,fontSize:14,fontWeight:600}}/>
-                <span style={{fontSize:12,color:sub}}>g · ⭐는 1회분</span>
-              </div>
-              {results.map((f,i)=>{const r=f.fav?1:grams/(f.base||100);return(
-                <div key={i} onClick={()=>addFood(f)} style={{display:"flex",alignItems:"center",gap:10,padding:"12px",borderRadius:12,cursor:"pointer",background:i%2?bg:"transparent",marginBottom:2}}>
-                  <div style={{flex:1,fontSize:14,fontWeight:600,color:ink}}>{f.name}</div>
-                  <div style={{fontSize:13,color:sub}}>{Math.round(f.kcal*r)}kcal · 단{Math.round(f.prot*r*10)/10}</div>
-                  <div style={{width:26,height:26,borderRadius:8,background:blueSoft,color:blue,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>+</div>
-                </div>
-              );})}
+              <div style={{fontSize:11,color:sub,marginBottom:8}}>담을 양을 선택하세요</div>
+              {results.map((f,i)=>{
+                if(f.fav){ // 즐겨찾기: 1회분 그대로
+                  return(
+                    <div key={i} style={{padding:"10px 12px",borderRadius:12,background:i%2?bg:"transparent",marginBottom:4}}>
+                      <div style={{fontSize:14,fontWeight:600,color:ink,marginBottom:6}}>{f.name}</div>
+                      <button onClick={()=>addFood(f)} style={{padding:"7px 14px",borderRadius:9,border:"none",background:amber,color:"#fff",fontFamily:font,fontSize:13,fontWeight:700,cursor:"pointer"}}>1회분 담기 · {f.kcal}kcal</button>
+                    </div>
+                  );
+                }
+                const b=f.base||100;
+                const rServ=f.serving?f.serving/b:null;
+                const r100=100/b;
+                return(
+                  <div key={i} style={{padding:"10px 12px",borderRadius:12,background:i%2?bg:"transparent",marginBottom:4}}>
+                    <div style={{fontSize:14,fontWeight:600,color:ink,marginBottom:2}}>{f.name}</div>
+                    <div style={{fontSize:11,color:sub,marginBottom:8}}>{b}g당 {Math.round(f.kcal)}kcal · 단{Math.round(f.prot*10)/10}g</div>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                      {f.serving&&(
+                        <button onClick={()=>addFood(f,f.serving)} style={{padding:"7px 12px",borderRadius:9,border:"none",background:blue,color:"#fff",fontFamily:font,fontSize:13,fontWeight:700,cursor:"pointer"}}>1인분({f.serving}g) · {Math.round(f.kcal*rServ)}kcal</button>
+                      )}
+                      <button onClick={()=>addFood(f,100)} style={{padding:"7px 12px",borderRadius:9,border:`1px solid ${blue}`,background:"#fff",color:blue,fontFamily:font,fontSize:13,fontWeight:700,cursor:"pointer"}}>100g · {Math.round(f.kcal*r100)}kcal</button>
+                      <div style={{display:"flex",alignItems:"center",gap:4}}>
+                        <input type="number" placeholder="g" value={grams} onChange={e=>setGrams(Number(e.target.value)||0)} style={{width:56,padding:"6px 8px",borderRadius:9,border:`1px solid ${line}`,color:ink,fontFamily:font,fontSize:13,fontWeight:600}}/>
+                        <button onClick={()=>addFood(f,grams)} style={{padding:"7px 10px",borderRadius:9,border:"none",background:teal,color:"#fff",fontFamily:font,fontSize:13,fontWeight:700,cursor:"pointer"}}>담기</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
           <button onClick={()=>{setShowManual(!showManual);if(!manual.name)setManual(m=>({...m,name:q.trim()}));}} style={{marginTop:10,background:bg,border:"none",color:sub,fontFamily:font,fontSize:13,fontWeight:600,padding:"10px 14px",borderRadius:10,cursor:"pointer",width:"100%"}}>+ 직접 입력 / 즐겨찾기 저장</button>
