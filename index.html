@@ -13,8 +13,9 @@
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
     <title>Body Bank</title>
     <style>
-      * { -webkit-tap-highlight-color: transparent; }
-      body { margin:0; }
+      * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+      html, body { margin:0; padding:0; width:100%; max-width:100%; overflow-x:hidden; }
+      #root { width:100%; overflow-x:hidden; }
       input { font-size:16px; } /* iOS 확대 방지 */
     </style>
   </head>
