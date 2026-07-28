@@ -364,20 +364,17 @@ export default function App(){
                   );
                 }
                 const b=f.base||100;
-                const rServ=f.serving?f.serving/b:null;
                 const r100=100/b;
                 return(
                   <div key={i} style={{padding:"10px 12px",borderRadius:12,background:i%2?bg:"transparent",marginBottom:4}}>
                     <div style={{fontSize:14,fontWeight:600,color:ink,marginBottom:2}}>{f.name}</div>
                     <div style={{fontSize:11,color:sub,marginBottom:8}}>{b}g당 {Math.round(f.kcal)}kcal · 단{Math.round(f.prot*10)/10}g</div>
-                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                      {f.serving&&(
-                        <button onClick={()=>addFood(f,f.serving)} style={{padding:"7px 12px",borderRadius:9,border:"none",background:blue,color:"#fff",fontFamily:font,fontSize:13,fontWeight:700,cursor:"pointer"}}>1인분({f.serving}g) · {Math.round(f.kcal*rServ)}kcal</button>
-                      )}
-                      <button onClick={()=>addFood(f,100)} style={{padding:"7px 12px",borderRadius:9,border:`1px solid ${blue}`,background:"#fff",color:blue,fontFamily:font,fontSize:13,fontWeight:700,cursor:"pointer"}}>100g · {Math.round(f.kcal*r100)}kcal</button>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                      <button onClick={()=>addFood(f,100)} style={{padding:"7px 14px",borderRadius:9,border:"none",background:blue,color:"#fff",fontFamily:font,fontSize:13,fontWeight:700,cursor:"pointer"}}>100g · {Math.round(f.kcal*r100)}kcal</button>
                       <div style={{display:"flex",alignItems:"center",gap:4}}>
-                        <input type="number" placeholder="g" value={grams} onChange={e=>setGrams(Number(e.target.value)||0)} style={{width:56,padding:"6px 8px",borderRadius:9,border:`1px solid ${line}`,color:ink,fontFamily:font,fontSize:13,fontWeight:600}}/>
-                        <button onClick={()=>addFood(f,grams)} style={{padding:"7px 10px",borderRadius:9,border:"none",background:teal,color:"#fff",fontFamily:font,fontSize:13,fontWeight:700,cursor:"pointer"}}>담기</button>
+                        <input type="number" placeholder="g" value={grams} onChange={e=>setGrams(Number(e.target.value)||0)} style={{width:60,padding:"7px 8px",borderRadius:9,border:`1px solid ${line}`,color:ink,fontFamily:font,fontSize:13,fontWeight:600}}/>
+                        <span style={{fontSize:11,color:sub}}>g</span>
+                        <button onClick={()=>addFood(f,grams)} style={{padding:"7px 12px",borderRadius:9,border:"none",background:teal,color:"#fff",fontFamily:font,fontSize:13,fontWeight:700,cursor:"pointer"}}>담기</button>
                       </div>
                     </div>
                   </div>

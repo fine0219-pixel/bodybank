@@ -1,5 +1,5 @@
 // 버전 올리면 캐시 갱신됨. 배포 때마다 숫자 올리면 확실.
-const CACHE = "bodybank-v" + "20260728b";
+const CACHE = "bodybank-v" + "20260728c";
 
 self.addEventListener("install", (e) => {
   self.skipWaiting(); // 새 SW 즉시 활성화
