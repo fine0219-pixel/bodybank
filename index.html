@@ -13,8 +13,9 @@
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
     <title>Body Bank</title>
     <style>
-      * { -webkit-tap-highlight-color: transparent; }
-      body { margin:0; }
+      * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+      html, body { margin:0; padding:0; width:100%; max-width:100%; overflow-x:hidden; }
+      #root { width:100%; overflow-x:hidden; }
       input { font-size:16px; } /* iOS 확대 방지 */
     </style>
   </head>
@@ -24,7 +25,26 @@
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
-          navigator.serviceWorker.register("/sw.js").catch(() => {});
+          navigator.serviceWorker.register("/sw.js").then((reg) => {
+            // 새 버전 감지되면 자동 반영
+            reg.addEventListener("updatefound", () => {
+              const nw = reg.installing;
+              if (!nw) return;
+              nw.addEventListener("statechange", () => {
+                if (nw.state === "installed" && navigator.serviceWorker.controller) {
+                  // 새 버전 설치됨 → 새로고침
+                  window.location.reload();
+                }
+              });
+            });
+          }).catch(() => {});
+          // 컨트롤러 바뀌면 한 번 새로고침
+          let refreshed = false;
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            if (refreshed) return;
+            refreshed = true;
+            window.location.reload();
+          });
         });
       }
     </script>

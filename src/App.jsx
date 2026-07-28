@@ -26,6 +26,40 @@ function coreQuery(text){
   return t.replace(/\s+/g," ").trim()||text.trim();
 }
 
+// 운동 MET 지수 (강도) — 칼로리 = MET × 체중(kg) × 시간(h)
+const EXERCISE_MET = [
+  { keys:["달리기","러닝","런닝","조깅","뛰기"], met:9.8, label:"달리기" },
+  { keys:["빠르게걷기","파워워킹","속보"], met:5.0, label:"빠르게 걷기" },
+  { keys:["걷기","산책","워킹"], met:3.5, label:"걷기" },
+  { keys:["자전거","사이클","싸이클","라이딩"], met:7.5, label:"자전거" },
+  { keys:["수영"], met:8.0, label:"수영" },
+  { keys:["등산","하이킹"], met:6.5, label:"등산" },
+  { keys:["헬스","웨이트","웨이트트레이닝","근력","운동"], met:5.0, label:"헬스" },
+  { keys:["요가","필라테스","스트레칭"], met:3.0, label:"요가" },
+  { keys:["줄넘기"], met:11.0, label:"줄넘기" },
+  { keys:["축구","풋살"], met:7.0, label:"축구" },
+  { keys:["농구"], met:6.5, label:"농구" },
+  { keys:["배드민턴"], met:5.5, label:"배드민턴" },
+  { keys:["테니스"], met:7.0, label:"테니스" },
+  { keys:["클라이밍","암벽"], met:8.0, label:"클라이밍" },
+  { keys:["복싱","킥복싱"], met:9.0, label:"복싱" },
+  { keys:["크로스핏"], met:8.0, label:"크로스핏" },
+  { keys:["스피닝"], met:8.5, label:"스피닝" },
+  { keys:["에어로빅","줌바"], met:6.5, label:"에어로빅" },
+];
+// "런닝 30분" → { met, label, minutes } 파싱
+function parseExercise(text){
+  const t=text.replace(/\s+/g,"");
+  // 시간 추출: "30분", "1시간", "1시간30분", "90분"
+  let minutes=0;
+  const h=t.match(/(\d+(?:\.\d+)?)\s*시간/); if(h)minutes+=parseFloat(h[1])*60;
+  const m=t.match(/(\d+)\s*분/); if(m)minutes+=parseInt(m[1]);
+  if(!minutes){ const bare=t.match(/(\d+)/); if(bare)minutes=parseInt(bare[1]); } // 숫자만 있으면 분으로
+  let found=null;
+  for(const ex of EXERCISE_MET){ if(ex.keys.some(k=>t.includes(k))){ found=ex; break; } }
+  return { found, minutes };
+}
+
 export default function App(){
   const [cfg,setCfg]=useState(()=>{ try{return JSON.parse(localStorage.getItem(LS_KEY))||{url:"",key:"",bmr:"",weight:"",protMult:1.8};}catch{return {url:"",key:"",bmr:"",weight:"",protMult:1.8};} });
   const [client,setClient]=useState(null);
@@ -148,9 +182,24 @@ export default function App(){
   };
 
   const addExercise=async()=>{
-    const k=Math.round(Number(exKcal)||0);if(!exName.trim()||k<=0)return;
-    await insert({day:date,kind:"exercise",label:exName.trim(),kcal:k,prot:0,carb:0,fat:0});
-    setExName("");setExKcal("");
+    if(!exName.trim())return;
+    let k=Math.round(Number(exKcal)||0);
+    let label=exName.trim();
+    // kcal 직접 안 넣었으면 자동 계산 시도
+    if(k<=0){
+      const {found,minutes}=parseExercise(exName);
+      if(found&&minutes>0&&weight>0){
+        k=Math.round(found.met*weight*(minutes/60));
+        label=`${found.label} ${minutes}분`;
+      }else if(found&&minutes>0&&weight<=0){
+        setStatus("자동 계산하려면 설정에서 몸무게를 입력해주세요.");return;
+      }else{
+        setStatus("칼로리를 못 구했어요. 예: '러닝 30분' 또는 kcal 직접 입력");return;
+      }
+    }
+    if(k<=0)return;
+    await insert({day:date,kind:"exercise",label,kcal:k,prot:0,carb:0,fat:0});
+    setExName("");setExKcal("");setStatus("");
   };
 
   const insert=async(row)=>{
@@ -223,8 +272,8 @@ export default function App(){
   );
 
   return(
-    <div style={{minHeight:"100vh",background:bg,color:ink,fontFamily:font,padding:"18px 14px 40px"}}>
-      <div style={{maxWidth:460,margin:"0 auto"}}>
+    <div style={{minHeight:"100vh",background:bg,color:ink,fontFamily:font,padding:"18px 14px 40px",boxSizing:"border-box",overflowX:"hidden",width:"100%"}}>
+      <div style={{maxWidth:460,margin:"0 auto",width:"100%",boxSizing:"border-box"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,padding:"0 4px"}}>
           <span style={{fontSize:20,fontWeight:800,color:blue}}>Body Bank</span>
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
@@ -296,8 +345,8 @@ export default function App(){
           <div style={{fontSize:15,fontWeight:800,marginBottom:4}}>🍽️ 식사 기록</div>
           <div style={{fontSize:12,color:sub,marginBottom:12}}>먹은 걸 그냥 툭 쳐보세요</div>
           <div style={{display:"flex",gap:8}}>
-            <input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==="Enter"&&searchFood()} placeholder="예: 상하이 스파이시버거 단품" style={{...inp,flex:1}}/>
-            <button onClick={searchFood} disabled={searching} style={{padding:"0 18px",borderRadius:12,border:"none",background:blue,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:font,fontSize:14}}>{searching?"…":"검색"}</button>
+            <input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==="Enter"&&searchFood()} placeholder="예: 상하이 스파이시버거 단품" style={{...inp,flex:1,minWidth:0}}/>
+            <button onClick={searchFood} disabled={searching} style={{padding:"0 18px",borderRadius:12,border:"none",background:blue,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:font,fontSize:14,flexShrink:0}}>{searching?"…":"검색"}</button>
           </div>
           {note&&<div style={{fontSize:12,color:blue,marginTop:8,fontWeight:600}}>{note}</div>}
           {results.length>0&&(
@@ -335,11 +384,12 @@ export default function App(){
         </div>
 
         <div style={cardStyle}>
-          <div style={{fontSize:15,fontWeight:800,marginBottom:12}}>🏃 운동 기록</div>
+          <div style={{fontSize:15,fontWeight:800,marginBottom:4}}>🏃 운동 기록</div>
+          <div style={{fontSize:12,color:sub,marginBottom:12}}>"러닝 30분"처럼 치면 칼로리 자동 계산 (kcal 비워두면 됨)</div>
           <div style={{display:"flex",gap:8}}>
-            <input value={exName} onChange={e=>setExName(e.target.value)} placeholder="헬스 1시간" style={{...inp,flex:1}}/>
-            <input type="number" value={exKcal} onChange={e=>setExKcal(e.target.value)} placeholder="kcal" style={{...inp,width:84}}/>
-            <button onClick={addExercise} style={{padding:"0 18px",borderRadius:12,border:"none",background:teal,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:font,fontSize:18}}>+</button>
+            <input value={exName} onChange={e=>setExName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addExercise()} placeholder="러닝 30분 / 헬스 1시간" style={{...inp,flex:1,minWidth:0}}/>
+            <input type="number" value={exKcal} onChange={e=>setExKcal(e.target.value)} placeholder="kcal" style={{...inp,width:64,flexShrink:0}}/>
+            <button onClick={addExercise} style={{padding:"0 16px",borderRadius:12,border:"none",background:teal,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:font,fontSize:18,flexShrink:0}}>+</button>
           </div>
         </div>
 
