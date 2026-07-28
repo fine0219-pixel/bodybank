@@ -4,6 +4,11 @@ import { createClient } from "@supabase/supabase-js";
 const CAL_TARGET = 1000;
 const LS_KEY = "bodybank_cfg";
 
+// ▼▼▼ 여기 두 줄만 네 Supabase 값으로 채워 넣어 ▼▼▼
+const SUPABASE_URL = "https://crqlkpxcnebbvxhdjtur.supabase.co";   // 예: "https://xxxx.supabase.co"
+const SUPABASE_KEY = "sb_publishable_1DEAgwoZwJ3znTyDV6Bbwg_mQcr75DC";   // anon key (eyJ... 로 시작하는 긴 거)
+// ▲▲▲ 채우면 첫 화면에서 URL·key 입력이 사라짐 ▲▲▲
+
 const PROT_GOALS = [
   { mult:1.0, label:"체중 유지", desc:"운동 거의 안 함 · 근육 유지 최소선" },
   { mult:1.4, label:"체형 관리", desc:"주 2~3회 운동 · 일반 헬스인" },
@@ -45,10 +50,12 @@ export default function App(){
   const [exName,setExName]=useState("");
   const [exKcal,setExKcal]=useState("");
 
-  // 저장된 설정 있으면 자동 연결
+  // 고정 키가 있으면 그걸로, 없으면 저장된 설정으로 자동 연결
   useEffect(()=>{
-    if(cfg.url&&cfg.key){
-      try{ setClient(createClient(cfg.url,cfg.key)); setConfigured(true); }catch(e){ setStatus("연결 실패: "+e.message); }
+    const url = SUPABASE_URL || cfg.url;
+    const key = SUPABASE_KEY || cfg.key;
+    if(url&&key){
+      try{ setClient(createClient(url,key)); setConfigured(true); }catch(e){ setStatus("연결 실패: "+e.message); }
     }
   },[]);
 
@@ -71,13 +78,16 @@ export default function App(){
   const fPct=macroKcal?Math.max(0,100-pPct-cPct):0;
 
   const saveCfgAndConnect=()=>{
-    if(!cfg.url||!cfg.key){setStatus("URL과 anon key를 넣어주세요.");return;}
+    const url = SUPABASE_URL || cfg.url;
+    const key = SUPABASE_KEY || cfg.key;
+    if(!url||!key){setStatus("URL과 anon key를 넣어주세요.");return;}
     try{
       localStorage.setItem(LS_KEY,JSON.stringify(cfg));
-      setClient(createClient(cfg.url,cfg.key));
+      setClient(createClient(url,key));
       setConfigured(true);setShowSettings(false);setStatus("");
     }catch(e){setStatus("연결 실패: "+e.message);}
   };
+  const HAS_FIXED = !!(SUPABASE_URL && SUPABASE_KEY);
 
   useEffect(()=>{
     if(!client)return;
@@ -172,7 +182,10 @@ export default function App(){
           <div style={{fontSize:12,letterSpacing:2,color:blue,fontWeight:800}}>BODY BANK</div>
           <h1 style={{margin:"6px 0 4px",fontSize:24,fontWeight:800}}>계좌 개설</h1>
           <p style={{margin:"0 0 22px",fontSize:13,color:sub}}>한 번만 입력하면 다음부턴 바로 열려요</p>
-          {[["Supabase URL","url","https://xxxx.supabase.co"],["anon key","key","eyJ..."],["기초대사량 (kcal)","bmr","1800"],["몸무게 (kg)","weight","70"]].map(([lab,k,ph])=>(
+          {(HAS_FIXED
+            ? [["기초대사량 (kcal)","bmr","1800"],["몸무게 (kg)","weight","70"]]
+            : [["Supabase URL","url","https://xxxx.supabase.co"],["anon key","key","eyJ..."],["기초대사량 (kcal)","bmr","1800"],["몸무게 (kg)","weight","70"]]
+          ).map(([lab,k,ph])=>(
             <div key={k} style={{marginBottom:12}}>
               <label style={{fontSize:12,color:sub,fontWeight:600,display:"block",marginBottom:5}}>{lab}</label>
               <input value={cfg[k]} onChange={e=>setCfg({...cfg,[k]:e.target.value})} placeholder={ph} style={{...inp,width:"100%"}}/>
